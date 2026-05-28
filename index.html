@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, viewport-fit=cover"/>
+<meta name="theme-color" content="#1a1a1a"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Retro64"/>
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'><rect fill='%23FF6B6B' width='180' height='180'/><text x='50%' y='50%' font-size='80' font-weight='bold' text-anchor='middle' dy='.3em' fill='white'>64</text></svg>"/>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23FF6B6B' width='192' height='192'/><text x='50%' y='50%' font-size='100' font-weight='bold' text-anchor='middle' dy='.3em' fill='white'>64</text></svg>"/>
+<link rel="manifest" href="manifest.json"/>
+<title>Retro64 - N64 Emulator</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  --primary: #FF6B6B;
+  --secondary: #4ECDC4;
+  --dark: #1a1a1a;
+  --darker: #0d0d0d;
+  --light: #f0f0f0;
+  --border: #333;
+  --safe-bottom: max(10px, env(safe-area-inset-bottom));
+  --safe-top: max(10px, env(safe-area-inset-top));
+  --safe-left: max(10px, env(safe-area-inset-left));
+  --safe-right: max(10px, env(safe-area-inset-right));
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--darker);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color: var(--light);
+  overflow: hidden;
+  width: 100%;
+  height: 100vh;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* MAIN LAYOUT */
+#mainContainer {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+  flex-direction: column;
+}
+
+/* TOP BAR */
+#topbar {
+  height: 50px;
+  background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
+  display: flex;
+  align-items: center;
+  padding: var(--safe-top) 10px 6px 10px;
+  gap: 8px;
+  color: white;
+  border-bottom: 2px solid var(--border);
+  flex-wrap: wrap;
+  z-index: 100;
+}
+
+.topbar-btn {
+  padding: 8px 12px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.topbar-btn:active {
+  transform: scale(0.95);
+  background: #e85555;
+}
+
+.topbar-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#statusIndicator {
+  margin-left: auto;
+  padding: 4px 8px;
+  background: rgba(78, 205, 196, 0.2);
+  border: 1px solid var(--secondary);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--secondary);
+}
+
+/* GAME AREA */
+#game {
+  flex: 1;
+  position: relative;
+  width: 100%;
+  background: var(--dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#emulator {
+  width: 100%;
+  height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+#emulator canvas {
+  display: block;
+  margin: auto;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
+}
+
+.loading-spinner {
+  display: none;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 50;
+}
+
+.loading-spinner.active {
+  display: block;
+}
+
+.spinner {
+  border: 4px solid rgba(255, 107, 107, 0.2);
+  border-top: 4px solid var(--primary);
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* SIDEBAR LIBRARY */
+#library {
+  position: fixed;
+  top: 0;
+  left: -320px;
+  width: 300px;
+  height: 100vh;
+  background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+  border-right: 2px solid var(--border);
+  overflow-y: auto;
+  padding: var(--safe-top) 10px 10px 10px;
+  z-index: 998;
+  transition: left 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+#library.open {
+  left: 0;
+}
+
+.library-header {
+  color: white;
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 15px;
+  margin-top: 10px;
+}
+
+.library-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.rom-item {
+  width: 100%;
+  padding: 12px;
+  margin: 8px 0;
+  background: linear-gradient(135deg, #2a2a2a 0%, #222 100%);
+  color: white;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rom-item:active {
+  background: linear-gradient(135deg, var(--primary) 0%, #e85555 100%);
+  transform: scale(0.98);
+}
+
+.rom-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.rom-action-btn {
+  flex: 1;
+  padding: 6px;
+  background: rgba(255, 107, 107, 0.2);
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rom-action-btn:active {
+  background: var(--primary);
+  color: white;
+}
+
+.library-footer {
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+#upload {
+  display: none;
+}
+
+.upload-btn {
+  width: 100%;
+  padding: 12px;
+  background: linear-gradient(135deg, var(--secondary) 0%, #3db8b0 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: all 0.2s;
+}
+
+.upload-btn:active {
+  transform: scale(0.98);
+  background: linear-gradient(135deg, #2aab9f 0%, #269b93 100%);
+}
+
+/* OVERLAY */
+#libraryOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 997;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+#libraryOverlay.visible {
+  display: block;
+  opacity: 1;
+}
+
+/* MODAL */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal.visible {
+  display: flex;
+}
+
+.modal-content {
+  background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 90%;
+  width: 400px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+}
+
+.modal-title {
+  font-size: 20px;
+  font-weight: bold;
+  margin-bottom: 15px;
+  color: white;
+}
+
+.modal-text {
+  margin-bottom: 15px;
+  color: #ccc;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.modal-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+}
+
+.modal-btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.modal-btn-primary:active {
+  background: #e85555;
+  transform: scale(0.98);
+}
+
+.modal-btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid var(--border);
+}
+
+.modal-btn-secondary:active {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(0.98);
+}
+
+/* CONTROLS */
+#controls {
+  position: fixed;
+  bottom: var(--safe-bottom);
+  left: var(--safe-left);
+  right: var(--safe-right);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  padding: 10px;
+  pointer-events: none;
+  z-index: 90;
+}
+
+.control-group {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  pointer-events: auto;
+}
+
+/* JOYSTICKS */
+.stick {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(255, 107, 107, 0.08);
+  border: 2px solid rgba(255, 107, 107, 0.3);
+  position: relative;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.stick-label {
+  position: absolute;
+  bottom: 8px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: bold;
+}
+
+.knob {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary) 0%, #e85555 100%);
+  position: absolute;
+  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+  transition: all 0.05s ease-out;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+}
+
+/* BUTTON GRIDS */
+.button-grid {
+  display: grid;
+  gap: 8px;
+  pointer-events: auto;
+}
+
+.button-grid-standard {
+  grid-template-columns: repeat(3, 45px);
+}
+
+.button-grid-shoulder {
+  grid-template-columns: repeat(2, 50px);
+}
+
+.btn {
+  width: 45px;
+  height: 45px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+  border: 1.5px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  text-align: center;
+  line-height: 45px;
+  border-radius: 8px;
+  user-select: none;
+  font-weight: 600;
+  font-size: 12px;
+  transition: all 0.1s;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.1);
+}
+
+.btn-shoulder {
+  width: 50px;
+  height: 35px;
+  line-height: 35px;
+  font-size: 11px;
+}
+
+.btn:active {
+  background: linear-gradient(135deg, var(--primary) 0%, #e85555 100%);
+  border-color: rgba(255, 107, 107, 0.6);
+  box-shadow: 0 0 15px rgba(255, 107, 107, 0.4);
+  transform: scale(0.95);
+}
+
+/* DPAD */
+.dpad {
+  display: grid;
+  grid-template-columns: repeat(3, 40px);
+  gap: 2px;
+  pointer-events: auto;
+}
+
+.dpad-btn {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, rgba(78, 205, 196, 0.15), rgba(78, 205, 196, 0.05));
+  border: 1.5px solid rgba(78, 205, 196, 0.3);
+  color: white;
+  text-align: center;
+  line-height: 40px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.1s;
+  pointer-events: auto;
+}
+
+.dpad-btn:active {
+  background: linear-gradient(135deg, var(--secondary) 0%, #3db8b0 100%);
+  border-color: var(--secondary);
+  box-shadow: 0 0 12px rgba(78, 205, 196, 0.4);
+  transform: scale(0.9);
+}
+
+.dpad-spacer {
+  pointer-events: none;
+}
+
+/* CONTROL LABELS */
+.control-label {
+  position: absolute;
+  font-size: 10px;
+  font-weight: bold;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* MENU PANEL */
+#menuPanel {
+  position: fixed;
+  bottom: var(--safe-bottom);
+  right: var(--safe-right);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: auto;
+  z-index: 90;
+}
+
+.menu-btn {
+  width: 50px;
+  height: 50px;
+  background: linear-gradient(135deg, rgba(255, 107, 107, 0.2), rgba(255, 107, 107, 0.1));
+  border: 1.5px solid rgba(255, 107, 107, 0.4);
+  color: white;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.menu-btn:active {
+  background: linear-gradient(135deg, var(--primary) 0%, #e85555 100%);
+  border-color: var(--primary);
+  transform: scale(0.9);
+}
+
+/* TOOLTIP */
+.tooltip {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 50;
+  display: none;
+  border: 1px solid rgba(255, 107, 107, 0.3);
+}
+
+/* SAVE STATE MENU */
+#saveStateMenu {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(135deg, #1a1a1a 0%, #0d0d0d 100%);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  z-index: 1001;
+  display: none;
+  width: 90%;
+  max-width: 400px;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
+}
+
+#saveStateMenu.visible {
+  display: flex;
+  flex-direction: column;
+}
+
+.save-state-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.save-state-item {
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.save-state-item:active {
+  background: rgba(255, 107, 107, 0.2);
+  border-color: var(--primary);
+}
+
+.save-state-info {
+  font-size: 12px;
+  color: #999;
+  margin-top: 4px;
+}
+
+/* RESPONSIVE */
+@media (max-width: 600px) {
+  #controls {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .stick {
+    width: 100px;
+    height: 100px;
+  }
+
+  .knob {
+    width: 40px;
+    height: 40px;
+  }
+
+  .btn {
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+    font-size: 11px;
+  }
+
+  .button-grid-standard {
+    grid-template-columns: repeat(3, 40px);
+  }
+
+  .dpad-btn {
+    width: 35px;
+    height: 35px;
+    line-height: 35px;
+    font-size: 14px;
+  }
+
+  .menu-btn {
+    width: 45px;
+    height: 45px;
+  }
+}
+
+/* LANDSCAPE */
+@media (orientation: landscape) and (max-height: 500px) {
+  #topbar {
+    height: 40px;
+    padding: 4px 8px;
+  }
+
+  .stick {
+    width: 90px;
+    height: 90px;
+  }
+
+  .knob {
+    width: 35px;
+    height: 35px;
+  }
+
+  .btn {
+    width: 35px;
+    height: 35px;
+    line-height: 35px;
+    font-size: 10px;
+  }
+
+  .dpad-btn {
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+  }
+
+  #controls {
+    gap: 8px;
+  }
+}
+
+/* SCROLLBAR */
+#library::-webkit-scrollbar,
+.modal-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+#library::-webkit-scrollbar-track,
+.modal-content::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+#library::-webkit-scrollbar-thumb,
+.modal-content::-webkit-scrollbar-thumb {
+  background: rgba(255, 107, 107, 0.3);
+  border-radius: 3px;
+}
+
+#library::-webkit-scrollbar-thumb:active,
+.modal-content::-webkit-scrollbar-thumb:active {
+  background: var(--primary);
+}
+
+/* ANIMATIONS */
+@keyframes slideIn {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes slideOut {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+</style>
+</head>
+
+<body>
+
+<div id="mainContainer">
+  <div id="topbar">
+    <button class="topbar-btn" onclick="toggleLibrary()" id="libraryBtn">📚 Library</button>
+    <button class="topbar-btn" onclick="openSaveStateMenu()" id="saveStateBtn">💾 Save/Load</button>
+    <button class="topbar-btn" onclick="openShaderMenu()" id="shaderBtn">🎨 Shaders</button>
+    <input type="file" id="upload" accept=".z64,.n64,.v64,.zip,.rom,.zip">
+    <div id="statusIndicator"></div>
+  </div>
+
+  <div id="game">
+    <div id="emulator"></div>
+    <div class="loading-spinner" id="loadingSpinner">
+      <div class="spinner"></div>
+    </div>
+  </div>
+</div>
+
+<!-- SIDEBAR LIBRARY -->
+<div id="libraryOverlay" onclick="toggleLibrary()"></div>
+<div id="library">
+  <div class="library-header">🎮 Game Library</div>
+  <div class="library-content" id="libraryContent"></div>
+  <div class="library-footer">
+    <button class="upload-btn" onclick="document.getElementById('upload').click()">➕ Add ROM</button>
+  </div>
+</div>
+
+<!-- CONTROLS -->
+<div id="controls">
+  <!-- LEFT SIDE: D-PAD and Left Stick -->
+  <div class="control-group">
+    <div style="display: flex; flex-direction: column; gap: 10px; pointer-events: auto;">
+      <!-- D-PAD -->
+      <div class="dpad">
+        <div class="dpad-spacer"></div>
+        <button class="dpad-btn" ontouchstart="pressKey('Up')" ontouchend="releaseKey('Up')">↑</button>
+        <div class="dpad-spacer"></div>
+        <button class="dpad-btn" ontouchstart="pressKey('Left')" ontouchend="releaseKey('Left')">←</button>
+        <button class="dpad-btn" ontouchstart="pressKey('Down')" ontouchend="releaseKey('Down')">↓</button>
+        <button class="dpad-btn" ontouchstart="pressKey('Right')" ontouchend="releaseKey('Right')">→</button>
+      </div>
+    </div>
+
+    <!-- LEFT STICK -->
+    <div class="stick" id="stickLeft">
+      <div class="knob" id="knobLeft"></div>
+      <div class="stick-label">L-Stick</div>
+    </div>
+  </div>
+
+  <!-- RIGHT SIDE: Buttons and C-Stick -->
+  <div class="control-group">
+    <!-- BUTTON GRID -->
+    <div style="display: flex; flex-direction: column; gap: 10px; pointer-events: auto;">
+      <!-- Action Buttons (A, B, Z) -->
+      <div class="button-grid button-grid-standard">
+        <button class="btn" ontouchstart="pressKey('B')" ontouchend="releaseKey('B')">B</button>
+        <button class="btn" ontouchstart="pressKey('A')" ontouchend="releaseKey('A')">A</button>
+        <button class="btn" ontouchstart="pressKey('Z')" ontouchend="releaseKey('Z')">Z</button>
+      </div>
+
+      <!-- Shoulder Buttons -->
+      <div class="button-grid button-grid-shoulder">
+        <button class="btn btn-shoulder" ontouchstart="pressKey('L')" ontouchend="releaseKey('L')">L</button>
+        <button class="btn btn-shoulder" ontouchstart="pressKey('R')" ontouchend="releaseKey('R')">R</button>
+      </div>
+
+      <!-- Start -->
+      <button class="btn" style="width: 100%; margin-bottom: 5px;" ontouchstart="pressKey('Start')" ontouchend="releaseKey('Start')">START</button>
+    </div>
+
+    <!-- C-STICK -->
+    <div class="stick" id="stickC">
+      <div class="knob" id="knobC"></div>
+      <div class="stick-label">C-Stick</div>
+    </div>
+  </div>
+</div>
+
+<!-- MENU BUTTONS -->
+<div id="menuPanel">
+  <button class="menu-btn" onclick="toggleLibrary()" title="Library">📚</button>
+  <button class="menu-btn" onclick="toggleFullscreen()" title="Fullscreen">🖥️</button>
+  <button class="menu-btn" onclick="toggleControls()" title="Controls">🎮</button>
+</div>
+
+<!-- SAVE STATE MODAL -->
+<div id="saveStateMenu" class="modal">
+  <div class="modal-content">
+    <div class="modal-title">💾 Save & Load States</div>
+    <div class="save-state-grid" id="saveStateGrid"></div>
+    <div class="modal-buttons">
+      <button class="modal-btn modal-btn-secondary" onclick="closeSaveStateMenu()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHADER MODAL -->
+<div id="shaderMenu" class="modal">
+  <div class="modal-content">
+    <div class="modal-title">🎨 Shader Effects</div>
+    <div id="shaderGrid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"></div>
+    <div class="modal-buttons">
+      <button class="modal-btn modal-btn-secondary" onclick="closeShaderMenu()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRMATION MODAL -->
+<div id="confirmModal" class="modal">
+  <div class="modal-content">
+    <div class="modal-title" id="confirmTitle">Confirm Action</div>
+    <div class="modal-text" id="confirmText"></div>
+    <div class="modal-buttons">
+      <button class="modal-btn modal-btn-secondary" onclick="closeConfirmModal()">Cancel</button>
+      <button class="modal-btn modal-btn-primary" onclick="executeConfirmAction()" id="confirmActionBtn">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.emulatorjs.org/latest/data/loader.js"></script>
+<script src="manifest.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
