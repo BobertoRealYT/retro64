@@ -1,0 +1,111 @@
+{
+  "name": "Retro64 - N64 Emulator",
+  "short_name": "Retro64",
+  "description": "Play classic Nintendo 64 games on your device with save states and shaders",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0d0d0d",
+  "theme_color": "#FF6B6B",
+  "dir": "ltr",
+  "lang": "en-US",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23FF6B6B' width='192' height='192'/><text x='50%' y='50%' font-size='100' font-weight='bold' text-anchor='middle' dy='.3em' fill='white'>64</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect fill='%23FF6B6B' width='512' height='512'/><text x='50%' y='50%' font-size='250' font-weight='bold' text-anchor='middle' dy='.3em' fill='white'>64</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect fill='%23FF6B6B' width='192' height='192' rx='45'/><text x='50%' y='50%' font-size='100' font-weight='bold' text-anchor='middle' dy='.3em' fill='white'>64</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect fill='%23FF6B6B' width='512' height='512' rx='120'/><text x='50%' y='50%' font-size='250' font-weight='bold' text-anchor='middle' dy='.3em' fill='white'>64</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%230d0d0d' width='540' height='720'/><rect fill='%231a1a1a' width='540' height='100'/><text x='270' y='50' font-size='40' font-weight='bold' text-anchor='middle' fill='%23FF6B6B'>Retro64</text><rect fill='%23333' x='50' y='150' width='440' height='500' rx='10'/><text x='270' y='400' font-size='60' font-weight='bold' text-anchor='middle' fill='%234ECDC4'>🎮</text></svg>",
+      "sizes": "540x720",
+      "type": "image/svg+xml",
+      "form_factor": "narrow"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1280 720'><rect fill='%230d0d0d' width='1280' height='720'/><rect fill='%231a1a1a' width='1280' height='80'/><text x='640' y='40' font-size='50' font-weight='bold' text-anchor='middle' fill='%23FF6B6B'>Retro64 - N64 Emulator</text><rect fill='%23333' x='100' y='120' width='1080' height='540' rx='10'/></svg>",
+      "sizes": "1280x720",
+      "type": "image/svg+xml",
+      "form_factor": "wide"
+    }
+  ],
+  "categories": ["games", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Library",
+      "short_name": "Library",
+      "description": "View your ROM library",
+      "url": "./?shortcut=library",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%23FF6B6B' width='96' height='96'/><text x='48' y='48' font-size='60' text-anchor='middle' dy='.3em' fill='white'>📚</text></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    },
+    {
+      "name": "Save States",
+      "short_name": "Save States",
+      "description": "Manage save states",
+      "url": "./?shortcut=saves",
+      "icons": [
+        {
+          "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 96 96'><rect fill='%234ECDC4' width='96' height='96'/><text x='48' y='48' font-size='60' text-anchor='middle' dy='.3em' fill='white'>💾</text></svg>",
+          "sizes": "96x96",
+          "type": "image/svg+xml"
+        }
+      ]
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "./",
+      "accept": {
+        "application/octet-stream": [".z64", ".n64", ".v64"]
+      },
+      "launch_type": "single-client"
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+retro64",
+      "url": "./?rom=%s"
+    }
+  ],
+  "share_target": {
+    "action": "./",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "files": [
+        {
+          "name": "rom",
+          "accept": ["application/octet-stream", ".z64", ".n64", ".v64"]
+        }
+      ]
+    }
+  },
+  "prefer_related_applications": false
+}
