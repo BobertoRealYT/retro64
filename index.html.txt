@@ -16,7 +16,7 @@ body {
 
 /* TOP BAR */
 #topbar {
-  height: 48px;
+  height: 50px;
   background: #222;
   display: flex;
   align-items: center;
@@ -28,21 +28,20 @@ body {
 /* GAME AREA */
 #game {
   position: absolute;
-  top: 48px;
+  top: 50px;
   bottom: 0;
   width: 100%;
 }
 
-iframe {
+#emulator {
   width: 100%;
   height: 100%;
-  border: none;
 }
 
 /* LIBRARY */
 #library {
   position: fixed;
-  top: 48px;
+  top: 50px;
   left: 0;
   right: 0;
   bottom: 0;
@@ -53,7 +52,7 @@ iframe {
   z-index: 999;
 }
 
-.gameBtn {
+.rom {
   width: 100%;
   padding: 14px;
   margin: 6px 0;
@@ -81,7 +80,6 @@ iframe {
   background: rgba(255,255,255,0.1);
   position: relative;
   pointer-events: auto;
-  transform: translate(20px, -10px);
 }
 
 .knob {
@@ -119,8 +117,8 @@ iframe {
 <body>
 
 <div id="topbar">
-  <button onclick="toggleLibrary()">📚 Games</button>
-  <button onclick="fs()">FS</button>
+  <button onclick="toggleLibrary()">📚 Library</button>
+  <input type="file" id="upload" accept=".z64,.n64,.v64,.zip">
 </div>
 
 <div id="library"></div>
@@ -137,97 +135,90 @@ iframe {
     <div class="btn" ontouchstart="press('B')">B</div>
     <div class="btn" ontouchstart="press('Z')">Z</div>
 
-    <div class="btn" ontouchstart="press('CUp')">C↑</div>
+    <div class="btn" ontouchstart="press('CUp')">↑</div>
     <div class="btn" ontouchstart="press('Start')">S</div>
-    <div class="btn" ontouchstart="press('CDown')">C↓</div>
+    <div class="btn" ontouchstart="press('CDown')">↓</div>
 
-    <div class="btn" ontouchstart="press('CLeft')">C←</div>
-    <div class="btn" ontouchstart="press('CRight')">C→</div>
+    <div class="btn" ontouchstart="press('CLeft')">←</div>
+    <div class="btn" ontouchstart="press('CRight')">→</div>
   </div>
 </div>
 
 <script src="https://cdn.emulatorjs.org/latest/data/loader.js"></script>
 
 <script>
-/* =========================
-   ROM LIBRARY (EDIT THIS)
-========================= */
-const ROMS = [
-  {
-    name: "Super Mario 64 (Hack)",
-    url: "https://example.com/sm64.z64"
-  },
-  {
-    name: "B3313",
-    url: "https://example.com/b3313.z64"
-  }
-];
+let ROMS = JSON.parse(localStorage.getItem("retro64_roms") || "[]");
+let currentRom = "";
 
-let romName = "default";
-
-/* =========================
-   LIBRARY UI
-========================= */
-function toggleLibrary() {
-  const lib = document.getElementById("library");
-  lib.style.display = lib.style.display === "block" ? "none" : "block";
+/* ---------------- LIBRARY ---------------- */
+function toggleLibrary(){
+  const lib=document.getElementById("library");
+  lib.style.display = lib.style.display==="block"?"none":"block";
   renderLibrary();
 }
 
-function renderLibrary() {
-  const lib = document.getElementById("library");
-  lib.innerHTML = "<h2 style='color:white'>Retro64 Library</h2>";
+function renderLibrary(){
+  const lib=document.getElementById("library");
+  lib.innerHTML="<h2 style='color:white'>Retro64 Library</h2>";
 
-  ROMS.forEach(r => {
-    const b = document.createElement("button");
-    b.className = "gameBtn";
-    b.innerText = r.name;
-    b.onclick = () => loadROM(r.url, r.name);
+  ROMS.forEach((r,i)=>{
+    const b=document.createElement("button");
+    b.className="rom";
+    b.innerText=r.name;
+    b.onclick=()=>loadROM(r.data,r.name);
     lib.appendChild(b);
   });
 }
 
-/* =========================
-   EMULATOR START (FIXED)
-========================= */
-function loadROM(url, name) {
-  romName = name;
+/* ---------------- ROM UPLOAD ---------------- */
+document.getElementById("upload").addEventListener("change", async e=>{
+  const file=e.target.files[0];
+  if(!file)return;
 
-  document.getElementById("library").style.display = "none";
-  document.getElementById("emulator").innerHTML = "";
+  const buf=await file.arrayBuffer();
+  const data=URL.createObjectURL(new Blob([buf]));
 
-  window.EJS_player = "#emulator";
-  window.EJS_core = "n64";
-  window.EJS_gameUrl = url;
-  window.EJS_pathtodata = "https://cdn.emulatorjs.org/latest/data/";
+  ROMS.push({name:file.name,data});
+  localStorage.setItem("retro64_roms",JSON.stringify(ROMS));
 
-  setTimeout(() => {
-    const s = document.createElement("script");
-    s.src = "https://cdn.emulatorjs.org/latest/data/loader.js";
+  alert("ROM saved to library!");
+});
+
+/* ---------------- EMULATOR ---------------- */
+function loadROM(url,name){
+  currentRom=name;
+  document.getElementById("library").style.display="none";
+  document.getElementById("emulator").innerHTML="";
+
+  window.EJS_player="#emulator";
+  window.EJS_core="n64";
+  window.EJS_gameUrl=url;
+  window.EJS_pathtodata="https://cdn.emulatorjs.org/latest/data/";
+
+  setTimeout(()=>{
+    const s=document.createElement("script");
+    s.src="https://cdn.emulatorjs.org/latest/data/loader.js";
     document.body.appendChild(s);
-  }, 300);
+  },300);
 }
 
-/* =========================
-   INPUT SYSTEM
-========================= */
+/* ---------------- CONTROLS ---------------- */
 function press(btn){
-  const map = {
-    A:"KeyX", B:"KeyZ", Z:"KeyC", Start:"Enter",
-    CUp:"Numpad8", CDown:"Numpad2",
-    CLeft:"Numpad4", CRight:"Numpad6"
+  const map={
+    A:"KeyX",B:"KeyZ",Z:"KeyC",
+    Start:"Enter",
+    CUp:"Numpad8",CDown:"Numpad2",
+    CLeft:"Numpad4",CRight:"Numpad6"
   };
 
-  const code = map[btn];
-  if(!code) return;
+  const code=map[btn];
+  if(!code)return;
 
   document.dispatchEvent(new KeyboardEvent("keydown",{code}));
   setTimeout(()=>document.dispatchEvent(new KeyboardEvent("keyup",{code})),80);
 }
 
-/* =========================
-   ANALOG STICK
-========================= */
+/* ---------------- JOYSTICK ---------------- */
 let drag=false;
 const stick=document.getElementById("stick");
 const knob=document.getElementById("knob");
@@ -254,13 +245,6 @@ stick.addEventListener("touchmove",e=>{
   if(x<-20)press("Left");
   if(x>20)press("Right");
 },{passive:false});
-
-/* =========================
-   FULLSCREEN
-========================= */
-function fs(){
-  document.documentElement.requestFullscreen();
-}
 </script>
 
 </body>
