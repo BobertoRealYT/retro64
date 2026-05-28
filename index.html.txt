@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
+
+<title>Retro64</title>
+
+<style>
+body {
+  margin: 0;
+  background: black;
+  font-family: Arial;
+  overflow: hidden;
+}
+
+/* TOP BAR */
+#topbar {
+  height: 48px;
+  background: #222;
+  display: flex;
+  align-items: center;
+  padding: 6px;
+  gap: 8px;
+  color: white;
+}
+
+/* GAME AREA */
+#game {
+  position: absolute;
+  top: 48px;
+  bottom: 0;
+  width: 100%;
+}
+
+iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* LIBRARY */
+#library {
+  position: fixed;
+  top: 48px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #111;
+  display: none;
+  overflow-y: auto;
+  padding: 10px;
+  z-index: 999;
+}
+
+.gameBtn {
+  width: 100%;
+  padding: 14px;
+  margin: 6px 0;
+  background: #222;
+  color: white;
+  border: none;
+  border-radius: 8px;
+}
+
+/* CONTROLS */
+#controls {
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.stick {
+  width: 110px;
+  height: 110px;
+  border-radius: 60px;
+  background: rgba(255,255,255,0.1);
+  position: relative;
+  pointer-events: auto;
+  transform: translate(20px, -10px);
+}
+
+.knob {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.4);
+  position: absolute;
+  left: 32px;
+  top: 32px;
+}
+
+.buttons {
+  display: grid;
+  grid-template-columns: repeat(3, 45px);
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.btn {
+  background: rgba(255,255,255,0.15);
+  color: white;
+  text-align: center;
+  line-height: 45px;
+  border-radius: 8px;
+  user-select: none;
+}
+
+.btn:active {
+  background: rgba(255,255,255,0.35);
+}
+</style>
+</head>
+
+<body>
+
+<div id="topbar">
+  <button onclick="toggleLibrary()">📚 Games</button>
+  <button onclick="fs()">FS</button>
+</div>
+
+<div id="library"></div>
+
+<div id="game">
+  <div id="emulator"></div>
+</div>
+
+<div id="controls">
+  <div class="stick" id="stick"><div class="knob" id="knob"></div></div>
+
+  <div class="buttons">
+    <div class="btn" ontouchstart="press('A')">A</div>
+    <div class="btn" ontouchstart="press('B')">B</div>
+    <div class="btn" ontouchstart="press('Z')">Z</div>
+
+    <div class="btn" ontouchstart="press('CUp')">C↑</div>
+    <div class="btn" ontouchstart="press('Start')">S</div>
+    <div class="btn" ontouchstart="press('CDown')">C↓</div>
+
+    <div class="btn" ontouchstart="press('CLeft')">C←</div>
+    <div class="btn" ontouchstart="press('CRight')">C→</div>
+  </div>
+</div>
+
+<script src="https://cdn.emulatorjs.org/latest/data/loader.js"></script>
+
+<script>
+/* =========================
+   ROM LIBRARY (EDIT THIS)
+========================= */
+const ROMS = [
+  {
+    name: "Super Mario 64 (Hack)",
+    url: "https://example.com/sm64.z64"
+  },
+  {
+    name: "B3313",
+    url: "https://example.com/b3313.z64"
+  }
+];
+
+let romName = "default";
+
+/* =========================
+   LIBRARY UI
+========================= */
+function toggleLibrary() {
+  const lib = document.getElementById("library");
+  lib.style.display = lib.style.display === "block" ? "none" : "block";
+  renderLibrary();
+}
+
+function renderLibrary() {
+  const lib = document.getElementById("library");
+  lib.innerHTML = "<h2 style='color:white'>Retro64 Library</h2>";
+
+  ROMS.forEach(r => {
+    const b = document.createElement("button");
+    b.className = "gameBtn";
+    b.innerText = r.name;
+    b.onclick = () => loadROM(r.url, r.name);
+    lib.appendChild(b);
+  });
+}
+
+/* =========================
+   EMULATOR START (FIXED)
+========================= */
+function loadROM(url, name) {
+  romName = name;
+
+  document.getElementById("library").style.display = "none";
+  document.getElementById("emulator").innerHTML = "";
+
+  window.EJS_player = "#emulator";
+  window.EJS_core = "n64";
+  window.EJS_gameUrl = url;
+  window.EJS_pathtodata = "https://cdn.emulatorjs.org/latest/data/";
+
+  setTimeout(() => {
+    const s = document.createElement("script");
+    s.src = "https://cdn.emulatorjs.org/latest/data/loader.js";
+    document.body.appendChild(s);
+  }, 300);
+}
+
+/* =========================
+   INPUT SYSTEM
+========================= */
+function press(btn){
+  const map = {
+    A:"KeyX", B:"KeyZ", Z:"KeyC", Start:"Enter",
+    CUp:"Numpad8", CDown:"Numpad2",
+    CLeft:"Numpad4", CRight:"Numpad6"
+  };
+
+  const code = map[btn];
+  if(!code) return;
+
+  document.dispatchEvent(new KeyboardEvent("keydown",{code}));
+  setTimeout(()=>document.dispatchEvent(new KeyboardEvent("keyup",{code})),80);
+}
+
+/* =========================
+   ANALOG STICK
+========================= */
+let drag=false;
+const stick=document.getElementById("stick");
+const knob=document.getElementById("knob");
+
+stick.addEventListener("touchstart",e=>{drag=true;e.preventDefault();},{passive:false});
+stick.addEventListener("touchend",()=>{drag=false;knob.style.transform="translate(0,0)";});
+stick.addEventListener("touchmove",e=>{
+  if(!drag)return;
+  e.preventDefault();
+
+  const t=e.touches[0];
+  const r=stick.getBoundingClientRect();
+
+  let x=t.clientX-r.left-55;
+  let y=t.clientY-r.top-55;
+
+  x=Math.max(-40,Math.min(40,x));
+  y=Math.max(-40,Math.min(40,y));
+
+  knob.style.transform=`translate(${x}px,${y}px)`;
+
+  if(y<-20)press("Up");
+  if(y>20)press("Down");
+  if(x<-20)press("Left");
+  if(x>20)press("Right");
+},{passive:false});
+
+/* =========================
+   FULLSCREEN
+========================= */
+function fs(){
+  document.documentElement.requestFullscreen();
+}
+</script>
+
+</body>
+</html>
